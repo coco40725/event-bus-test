@@ -129,8 +129,18 @@ class TestBlockingRequest @Inject constructor(
     @Path("/eventbus3")
     @NonBlocking
     @Produces(MediaType.TEXT_PLAIN)
-    fun blockRequestTest6(): Uni<Int>? {
+    fun blockRequestTest6(): Uni<Int> {
         return bus.request<Int>("hello", mapOf("num" to 2, "times" to 14))
                 .onItem().transform{ it.body()}
+    }
+
+    @GET
+    @Path("/eventbus4")
+    @NonBlocking
+    @Produces(MediaType.TEXT_PLAIN)
+    fun blockRequestTest7(): Uni<Int>{
+        println("request: ${Thread.currentThread().name}")
+        return bus.request<Int>("hello1", mapOf("num" to 2, "times" to 22))
+            .onItem().transform{ it.body()}
     }
 }

@@ -20,9 +20,6 @@ class BlockingSvc {
         return num * 2
     }
 
-    fun busEvent(num: Int){
-
-    }
 
 
 
