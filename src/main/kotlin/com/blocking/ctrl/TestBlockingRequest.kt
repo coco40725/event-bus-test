@@ -1,8 +1,6 @@
 package com.blocking.ctrl
 
-import com.blocking.svc.AcceptorVerticle
-import com.blocking.svc.BlockingSvc
-import com.blocking.svc.WorkerVerticle
+import com.blocking.svc.*
 import io.quarkus.mongodb.runtime.dns.MongoDnsClientProvider.vertx
 import io.smallrye.common.annotation.NonBlocking
 import io.smallrye.mutiny.Uni
@@ -12,6 +10,8 @@ import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
 import jakarta.ws.rs.core.MediaType
+import io.vertx.mutiny.core.eventbus.EventBus
+import io.vertx.mutiny.core.eventbus.Message
 
 /**
 @author Yu-Jing
@@ -21,7 +21,9 @@ import jakarta.ws.rs.core.MediaType
 class TestBlockingRequest @Inject constructor(
         private val  blockingSvc: BlockingSvc,
         private val acceptorVerticle: AcceptorVerticle,
-        private val workerVerticle: WorkerVerticle
+        private val workerVerticle: WorkerVerticle,
+        private val eventBusWithAnnotation: EventBusWithAnnotation,
+        private val bus: EventBus
 ){
 
     @GET
@@ -123,4 +125,12 @@ class TestBlockingRequest @Inject constructor(
         }
     }
 
+    @GET
+    @Path("/eventbus3")
+    @NonBlocking
+    @Produces(MediaType.TEXT_PLAIN)
+    fun blockRequestTest6(): Uni<Int>? {
+        return bus.request<Int>("hello", mapOf("num" to 2, "times" to 14))
+                .onItem().transform{ it.body()}
+    }
 }
