@@ -1,10 +1,12 @@
 package com.blocking.ctrl
 
+import com.blocking.svc.AcceptorVerticle
 import com.blocking.svc.BlockingSvc
+import com.blocking.svc.WorkerVerticle
 import io.quarkus.mongodb.runtime.dns.MongoDnsClientProvider.vertx
 import io.smallrye.common.annotation.NonBlocking
 import io.smallrye.mutiny.Uni
-import io.smallrye.mutiny.subscription.UniEmitter
+import io.vertx.core.DeploymentOptions
 import jakarta.inject.Inject
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
@@ -17,7 +19,9 @@ import jakarta.ws.rs.core.MediaType
  */
 @Path("/block")
 class TestBlockingRequest @Inject constructor(
-        private val  blockingSvc: BlockingSvc
+        private val  blockingSvc: BlockingSvc,
+        private val acceptorVerticle: AcceptorVerticle,
+        private val workerVerticle: WorkerVerticle
 ){
 
     @GET
@@ -73,4 +77,49 @@ class TestBlockingRequest @Inject constructor(
             }
         }
     }
+
+    @GET
+    @Path("/eventbus1")
+    @NonBlocking
+    @Produces(MediaType.TEXT_PLAIN)
+    fun blockRequestTest4(){
+        println("Request accepted: thread ${Thread.currentThread().name}")
+        vertx.deployVerticle(acceptorVerticle)
+                .onComplete{res ->
+                    if (res.succeeded()) {
+                        println("Deployment id is: " + res.result());
+
+                    } else {
+                        println("Deployment failed!");
+                    }
+                }
+        workerVerticle.address = "my/first/address"
+        vertx.deployVerticle(workerVerticle, DeploymentOptions().setWorker(true))
+    }
+
+    @GET
+    @Path("/eventbus2")
+    @NonBlocking
+    @Produces(MediaType.TEXT_PLAIN)
+    fun blockRequestTest5(): Uni<Int>{
+        println("Request accepted: thread ${Thread.currentThread().name}")
+        val map = mapOf("num" to 2, "times" to 4)
+        val bus = vertx.eventBus()
+        workerVerticle.address = "sendfrom/controller"
+        vertx.deployVerticle(workerVerticle, DeploymentOptions().setWorker(true))
+
+        return Uni.createFrom().emitter{ em ->
+            bus.request<Int>("sendfrom/controller", map)
+                    .onComplete{res ->
+                        if (res.succeeded()) {
+                            println("Deployment id is: " + res.result());
+                            println("thread name ${Thread.currentThread().name} result: ${res.result().body()}")
+                            em.complete(res.result().body())
+                        } else {
+                            println("fail ${res.cause()}");
+                        }
+                    }
+        }
+    }
+
 }

@@ -19,4 +19,12 @@ class BlockingSvc {
         Thread.sleep(30000)
         return num * 2
     }
+
+    fun busEvent(num: Int){
+
+    }
+
+
+
+
 }
