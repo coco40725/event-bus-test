@@ -84,6 +84,9 @@ class TestBlockingRequest @Inject constructor(
     @Produces(MediaType.TEXT_PLAIN)
     fun blockRequestTest4(){
         println("Request accepted: thread ${Thread.currentThread().name}")
+        workerVerticle.address = "my/first/address"
+        vertx.deployVerticle(workerVerticle, DeploymentOptions().setWorker(true))
+
         vertx.deployVerticle(acceptorVerticle)
                 .onComplete{res ->
                     if (res.succeeded()) {
@@ -93,8 +96,6 @@ class TestBlockingRequest @Inject constructor(
                         println("Deployment failed!");
                     }
                 }
-        workerVerticle.address = "my/first/address"
-        vertx.deployVerticle(workerVerticle, DeploymentOptions().setWorker(true))
     }
 
     @GET
