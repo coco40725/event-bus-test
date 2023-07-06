@@ -1,5 +1,7 @@
 package com.blocking.ctrl
 
+import com.blocking.entity.Person
+import com.blocking.entity.PersonList
 import com.blocking.svc.*
 import io.quarkus.mongodb.runtime.dns.MongoDnsClientProvider.vertx
 import io.smallrye.common.annotation.NonBlocking
@@ -143,4 +145,48 @@ class TestBlockingRequest @Inject constructor(
         return bus.request<Int>("hello1", mapOf("num" to 2, "times" to 22))
             .onItem().transform{ it.body()}
     }
+
+
+    /**
+     * Person 可以作為 consume 的message 送出
+     */
+    @GET
+    @Path("/eventbus5")
+    @NonBlocking
+    @Produces(MediaType.TEXT_PLAIN)
+    fun blockRequestTest8(): Uni<Person>{
+        println("request: ${Thread.currentThread().name}")
+        return bus.request<Person>("person", 12)
+            .onItem().transform{ it.body()}
+    }
+
+
+    /**
+     * List<Person>  “不”可以作為 consume 的message 送出，會出現 (RECIPIENT_FAILURE,8185) java.lang.RuntimeException: java.io.NotSerializableException: com.blocking.entity.Person
+     */
+    @GET
+    @Path("/eventbus6")
+    @NonBlocking
+    @Produces(MediaType.TEXT_PLAIN)
+    fun blockRequestTest9(): Uni<List<Person>>{
+        println("request: ${Thread.currentThread().name}")
+        return bus.request<List<Person>>("persons", 30)
+            .onItem().transform{ it.body()}
+    }
+
+
+    /**
+     * 我們將  List<Person> 做為 PersonList 的一個屬性，然後就能作為 message 傳過來了，
+     * 最後在這邊轉換時再調整回 List<Person>
+     */
+    @GET
+    @Path("/eventbus7")
+    @NonBlocking
+    @Produces(MediaType.TEXT_PLAIN)
+    fun blockRequestTest10(): Uni<List<Person>>{
+        println("request: ${Thread.currentThread().name}")
+        return bus.request<PersonList>("personsInnerList", 20)
+            .onItem().transform{ it.body().personList}
+    }
+
 }
