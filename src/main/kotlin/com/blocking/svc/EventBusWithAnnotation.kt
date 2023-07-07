@@ -41,6 +41,20 @@ class EventBusWithAnnotation {
         return Uni.createFrom().item(result)
     }
 
+    @ConsumeEvent("hello2")
+    @Blocking
+    fun consumeList(list: List<Int>): Uni<Int> {
+        println(Thread.currentThread().name + ", consume event")
+        var result = 0
+        list.forEach { it ->
+            result += it
+        }
+
+        Thread.sleep(10000)
+
+        return Uni.createFrom().item(result)
+    }
+
 
     @ConsumeEvent("person")
     @Blocking

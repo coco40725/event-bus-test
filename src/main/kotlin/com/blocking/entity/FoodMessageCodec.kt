@@ -59,8 +59,6 @@ class FoodMessageCodec: MessageCodec<Food, Food> {
     override fun name(): String {
         // Each codec must have a unique name.
         // This is used to identify a codec when sending a message and for unregistering codecs.
-        println("call name")
-        println(this.javaClass.simpleName)
         return this.javaClass.simpleName
     }
 

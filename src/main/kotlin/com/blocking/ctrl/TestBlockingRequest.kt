@@ -156,6 +156,16 @@ class TestBlockingRequest @Inject constructor(
             .onItem().transform{ it.body()}
     }
 
+    @GET
+    @Path("/eventbus4_1")
+    @NonBlocking
+    @Produces(MediaType.TEXT_PLAIN)
+    fun blockRequestTest7_1(): Uni<Int>{
+        println("request: ${Thread.currentThread().name}")
+        return bus.request<Int>("hello2", listOf(1,3))
+            .onItem().transform{ it.body()}
+    }
+
 
     /**
      * Person 可以作為 consume 的message 送出
