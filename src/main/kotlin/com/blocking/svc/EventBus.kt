@@ -1,6 +1,9 @@
 package com.blocking.svc
 
+import com.blocking.entity.Food
+import com.blocking.entity.FoodMessageCodec
 import io.vertx.core.AbstractVerticle
+import io.vertx.core.eventbus.DeliveryOptions
 import io.vertx.core.eventbus.EventBus
 import jakarta.enterprise.context.ApplicationScoped
 
@@ -63,6 +66,60 @@ class WorkerVerticle : AbstractVerticle(){
 
             // 完成，結果要回傳給 bus
             message.reply(result)
+        }
+    }
+}
+
+@ApplicationScoped
+class WorkerVerticleWithFood: AbstractVerticle(){
+    var address: String = ""
+    override fun start() {
+        println(Thread.currentThread().name + ", Start Worker...")
+
+        // '調用 bus'
+        val bus = vertx.eventBus()
+
+
+        // 取得消息
+        val consumer = bus.consumer<Food>(this.address)
+        consumer.handler{message ->
+            println("thread ${Thread.currentThread().name}:I am the worker, and get the message from Acceptor: ${message.body()}")
+            val food = message.body()
+            val name = food.name
+            val price = food.price
+            val sale = food.sale
+
+            Thread.sleep(10000)
+
+            // 完成，結果要回傳給 bus
+            message.reply("Acceptor give me the $name , and its price is $price. Sale: $sale")
+        }
+    }
+}
+
+@ApplicationScoped
+class WorkerVerticleWithFoodList: AbstractVerticle(){
+    var address: String = ""
+    override fun start() {
+        println(Thread.currentThread().name + ", Start Worker...")
+
+        // '調用 bus'
+        val bus = vertx.eventBus()
+
+
+        // 取得消息
+        val consumer = bus.consumer<List<Food>>(this.address)
+        consumer.handler{message ->
+            println("thread ${Thread.currentThread().name}:I am the worker, and get the message from Acceptor: ${message.body()}")
+            val food = message.body()
+            val name = food[0].name
+            val price = food[0].price
+            val sale = food[0].sale
+
+            Thread.sleep(10000)
+
+            // 完成，結果要回傳給 bus
+            message.reply("Acceptor give me the (First!!) $name , and its price is $price. Sale: $sale")
         }
     }
 }

@@ -1,19 +1,18 @@
 package com.blocking.ctrl
 
-import com.blocking.entity.Person
-import com.blocking.entity.PersonList
+import com.blocking.entity.*
 import com.blocking.svc.*
 import io.quarkus.mongodb.runtime.dns.MongoDnsClientProvider.vertx
 import io.smallrye.common.annotation.NonBlocking
 import io.smallrye.mutiny.Uni
 import io.vertx.core.DeploymentOptions
+import io.vertx.mutiny.core.eventbus.EventBus
+import jakarta.annotation.PostConstruct
 import jakarta.inject.Inject
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.Produces
 import jakarta.ws.rs.core.MediaType
-import io.vertx.mutiny.core.eventbus.EventBus
-import io.vertx.mutiny.core.eventbus.Message
 
 /**
 @author Yu-Jing
@@ -24,15 +23,25 @@ class TestBlockingRequest @Inject constructor(
         private val  blockingSvc: BlockingSvc,
         private val acceptorVerticle: AcceptorVerticle,
         private val workerVerticle: WorkerVerticle,
-        private val eventBusWithAnnotation: EventBusWithAnnotation,
+        private val workerVerticleWithFood: WorkerVerticleWithFood,
+        private val workerVerticleWithFoodList: WorkerVerticleWithFoodList,
         private val bus: EventBus
 ){
+
+    @PostConstruct
+    fun initialize() {
+        println("Initialization executed.")
+        val foodCodec = FoodMessageCodec()
+        vertx.eventBus().unregisterCodec(foodCodec.name())
+        vertx.eventBus().registerDefaultCodec(Food::class.java, foodCodec)
+    }
 
     @GET
     @Path("/default")
     @NonBlocking
     @Produces(MediaType.TEXT_PLAIN)
     fun blockRequestTest1(): Uni<Int>{
+        println("Request accepted: thread ${Thread.currentThread().name}")
         var num = 12
         num = blockingSvc.blockingFun5s(num)
         return Uni.createFrom().item(num)
@@ -44,6 +53,7 @@ class TestBlockingRequest @Inject constructor(
     @NonBlocking
     @Produces(MediaType.TEXT_PLAIN)
     fun blockRequestTest2(): Uni<Int>{
+        println("Request accepted: thread ${Thread.currentThread().name}")
         val num = 12
         return Uni.createFrom().emitter { em ->
             vertx.executeBlocking<Int> { promise ->
@@ -187,6 +197,64 @@ class TestBlockingRequest @Inject constructor(
         println("request: ${Thread.currentThread().name}")
         return bus.request<PersonList>("personsInnerList", 20)
             .onItem().transform{ it.body().personList}
+    }
+
+
+    @GET
+    @Path("/eventbus8")
+    @NonBlocking
+    @Produces(MediaType.APPLICATION_JSON)
+    fun blockRequestTest11(): Uni<String> {
+        println("request: ${Thread.currentThread().name}")
+        val food = Food("orange", 333.0, true)
+        val bus = vertx.eventBus()
+
+
+        workerVerticleWithFood.address = "my/food"
+        vertx.deployVerticle(workerVerticleWithFood, DeploymentOptions().setWorker(true))
+
+        return Uni.createFrom().emitter{ em ->
+            bus.request<String>("my/food", food)
+                .onComplete{res ->
+                    if (res.succeeded()) {
+                        println("Deployment id is: " + res.result());
+                        println("thread name ${Thread.currentThread().name} result: ${res.result().body()}")
+                        em.complete(res.result().body())
+                    } else {
+                        println("fail ${res.cause()}");
+                    }
+                }
+        }
+    }
+
+
+    @GET
+    @Path("/eventbus9")
+    @NonBlocking
+    @Produces(MediaType.APPLICATION_JSON)
+    fun blockRequestTest12(): Uni<String> {
+        println("request: ${Thread.currentThread().name}")
+        val food = Food("orange", 333.0, true)
+        val food1 = Food("apple", 111.0, true)
+
+        val bus = vertx.eventBus()
+
+
+        workerVerticleWithFoodList.address = "my/foodList"
+        vertx.deployVerticle(workerVerticleWithFoodList, DeploymentOptions().setWorker(true))
+
+        return Uni.createFrom().emitter{ em ->
+            bus.request<String>("my/foodList", listOf(food1, food))
+                .onComplete{res ->
+                    if (res.succeeded()) {
+                        println("Deployment id is: " + res.result());
+                        println("thread name ${Thread.currentThread().name} result: ${res.result().body()}")
+                        em.complete(res.result().body())
+                    } else {
+                        println("fail ${res.cause()}");
+                    }
+                }
+        }
     }
 
 }

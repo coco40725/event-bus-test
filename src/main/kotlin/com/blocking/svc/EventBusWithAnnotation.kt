@@ -56,7 +56,7 @@ class EventBusWithAnnotation {
     }
 
 
-    @ConsumeEvent("persons")
+    @ConsumeEvent(value = "persons")
     @Blocking
     fun consumePOJOList(age: Int): List<Person>{
         println(Thread.currentThread().name + ", consume event")
